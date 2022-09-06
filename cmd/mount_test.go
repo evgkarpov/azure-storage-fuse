@@ -77,6 +77,7 @@ type mountTestSuite struct {
 func (suite *mountTestSuite) SetupTest() {
 	suite.assert = assert.New(suite.T())
 	osExit = suite.testOsExit
+	options = mountOptions{}
 	err := log.SetDefaultLogger("silent", common.LogConfig{Level: common.ELogLevel.LOG_DEBUG()})
 	if err != nil {
 		panic("Unable to set silent logger as default.")
