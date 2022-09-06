@@ -81,7 +81,11 @@ var mountAllCmd = &cobra.Command{
 }
 
 func processCommand() {
-	parseConfig()
+	if err := parseConfig(); err != nil {
+		log.Err("mount_all::processCommand : parseConfig [%v]", err)
+		osExit(1)
+		return
+	}
 
 	err := config.Unmarshal(&options)
 	if err != nil {

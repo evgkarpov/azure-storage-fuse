@@ -77,7 +77,11 @@ var gen1Cmd = &cobra.Command{
 		resetGenOneOptions()
 		options.MountPath = args[0]
 		options.ConfigFile = configFile
-		parseConfig()
+		if err := parseConfig(); err != nil {
+			log.Err("mountgen1: parseConfig [%v]", err)
+			osExit(1)
+			return err
+		}
 
 		err := config.Unmarshal(&options)
 		if err != nil {

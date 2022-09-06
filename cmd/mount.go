@@ -94,6 +94,9 @@ type mountOptions struct {
 
 var options mountOptions
 
+// using this for coverage
+var osExit = os.Exit
+
 func (opt *mountOptions) validate(skipEmptyMount bool) error {
 	if opt.MountPath == "" {
 		return fmt.Errorf("argument error: mount path not provided")
@@ -173,7 +176,7 @@ func OnConfigChange() {
 }
 
 // parseConfig : Based on config file or encrypted data parse the provided config
-func parseConfig() {
+func parseConfig() error {
 	options.ConfigFile = common.ExpandPath(options.ConfigFile)
 
 	// Based on extension decide file is encrypted or not
@@ -189,36 +192,37 @@ func parseConfig() {
 		if options.PassPhrase == "" {
 			fmt.Println("argument error: No passphrase provided to decrypt the config file.",
 				"Either use --passphrase cli option or store passphrase in BLOBFUSE2_SECURE_CONFIG_PASSPHRASE environment variable.")
-			os.Exit(1)
+			return fmt.Errorf("argument error: No passphrase provided to decrypt the config file")
 		}
 
 		cipherText, err := ioutil.ReadFile(options.ConfigFile)
 		if err != nil {
 			fmt.Println("failed to read encrypted config file ", options.ConfigFile, "[", err.Error(), "]")
-			os.Exit(1)
+			return err
 		}
 
 		plainText, err := common.DecryptData(cipherText, []byte(options.PassPhrase))
 		if err != nil {
 			fmt.Println("failed to decrypt config file ", options.ConfigFile, "[", err.Error(), "]")
-			os.Exit(1)
+			return err
 		}
 
 		config.SetConfigFile(options.ConfigFile)
 		config.SetSecureConfigOptions(options.PassPhrase)
 		err = config.ReadFromConfigBuffer(plainText)
 		if err != nil {
-			fmt.Printf("invalid decrypted config file [%v]", err)
-			os.Exit(1)
+			fmt.Printf("invalid decrypted config file [%v]\n", err)
+			return err
 		}
 
 	} else {
 		err := config.ReadFromConfigFile(options.ConfigFile)
 		if err != nil {
-			fmt.Printf("invalid config file [%v]", err)
-			os.Exit(1)
+			fmt.Printf("invalid config file [%v]\n", err)
+			return err
 		}
 	}
+	return nil
 }
 
 var mountCmd = &cobra.Command{
@@ -248,13 +252,18 @@ var mountCmd = &cobra.Command{
 		}
 
 		if configFileExists {
-			parseConfig()
+			if err := parseConfig(); err != nil {
+				log.Err("mount: parseConfig [%v]", err)
+				osExit(1)
+				return
+			}
 		}
 
 		err := config.Unmarshal(&options)
 		if err != nil {
-			fmt.Printf("Init error config unmarshall [%s]", err)
-			os.Exit(1)
+			fmt.Printf("Init error config unmarshall [%s]\n", err)
+			osExit(1)
+			return
 		}
 
 		if !configFileExists || len(options.Components) == 0 {
@@ -281,13 +290,15 @@ var mountCmd = &cobra.Command{
 			// there are only 8 available options for -o so if we have more we should throw
 			if len(options.LibfuseOptions) > 8 {
 				fmt.Print(allowedFlags)
-				os.Exit(1)
+				osExit(1)
+				return
 			}
 			for _, v := range options.LibfuseOptions {
 				parameter := strings.Split(v, "=")
 				if len(parameter) > 2 || len(parameter) <= 0 {
 					fmt.Print(allowedFlags)
-					os.Exit(1)
+					osExit(1)
+					return
 				}
 				v = strings.TrimSpace(v)
 				if v == "default_permissions" {
@@ -307,14 +318,16 @@ var mountCmd = &cobra.Command{
 				} else if strings.HasPrefix(v, "umask=") {
 					permission, err := strconv.ParseUint(parameter[1], 10, 32)
 					if err != nil {
-						fmt.Printf("Mount: %s", err)
-						os.Exit(1)
+						fmt.Printf("Mount: %s\n", err)
+						osExit(1)
+						return
 					}
 					perm := ^uint32(permission) & 777
 					config.Set("libfuse.default-permission", fmt.Sprint(perm))
 				} else {
 					fmt.Print(allowedFlags)
-					os.Exit(1)
+					osExit(1)
+					return
 				}
 			}
 		}
@@ -329,8 +342,9 @@ var mountCmd = &cobra.Command{
 
 		err = options.validate(false)
 		if err != nil {
-			fmt.Printf("Mount: error invalid options [%v]", err)
-			os.Exit(1)
+			fmt.Printf("Mount: error invalid options [%v]\n", err)
+			osExit(1)
+			return
 		}
 
 		var logLevel common.LogLevel
@@ -348,8 +362,9 @@ var mountCmd = &cobra.Command{
 		})
 
 		if err != nil {
-			fmt.Printf("Mount: error initializing logger [%v]", err)
-			os.Exit(1)
+			fmt.Printf("Mount: error initializing logger [%v]\n", err)
+			osExit(1)
+			return
 		}
 
 		if config.IsSet("invalidate-on-sync") {
@@ -425,11 +440,11 @@ var mountCmd = &cobra.Command{
 				os.Remove(options.CPUProfile)
 				f, err := os.Create(options.CPUProfile)
 				if err != nil {
-					fmt.Printf("error opening file for cpuprofile [%s]", err)
+					fmt.Printf("error opening file for cpuprofile [%s]\n", err)
 				}
 				defer f.Close()
 				if err := pprof.StartCPUProfile(f); err != nil {
-					fmt.Printf("failed to start cpuprofile [%s]", err)
+					fmt.Printf("failed to start cpuprofile [%s]\n", err)
 				}
 				defer pprof.StopCPUProfile()
 			}
@@ -443,12 +458,12 @@ var mountCmd = &cobra.Command{
 				os.Remove(options.MemProfile)
 				f, err := os.Create(options.MemProfile)
 				if err != nil {
-					fmt.Printf("error opening file for memprofile [%s]", err)
+					fmt.Printf("error opening file for memprofile [%s]\n", err)
 				}
 				defer f.Close()
 				runtime.GC()
 				if err = pprof.WriteHeapProfile(f); err != nil {
-					fmt.Printf("error memory profiling [%s]", err)
+					fmt.Printf("error memory profiling [%s]\n", err)
 				}
 			}
 		}
@@ -470,14 +485,14 @@ func runPipeline(pipeline *internal.Pipeline, ctx context.Context) {
 	err := pipeline.Start(ctx)
 	if err != nil {
 		log.Err("Mount: error unable to start pipeline [%v]", err)
-		fmt.Printf("Mount: error unable to start pipeline [%v]", err)
+		fmt.Printf("Mount: error unable to start pipeline [%v]\n", err)
 		Destroy(1)
 	}
 
 	err = pipeline.Stop()
 	if err != nil {
 		log.Err("Mount: error unable to stop pipeline [%v]", err)
-		fmt.Printf("Mount: error unable to stop pipeline [%v]", err)
+		fmt.Printf("Mount: error unable to stop pipeline [%v]\n", err)
 		Destroy(1)
 	}
 
@@ -628,5 +643,5 @@ func init() {
 
 func Destroy(code int) {
 	_ = log.Destroy()
-	os.Exit(code)
+	osExit(code)
 }

@@ -80,7 +80,11 @@ var healthMonCmd = &cobra.Command{
 		}
 
 		options.ConfigFile = configFile
-		parseConfig()
+		if err := parseConfig(); err != nil {
+			log.Err("health-monitor: parseConfig [%v]", err)
+			osExit(1)
+			return err
+		}
 
 		err = config.UnmarshalKey("file_cache", &cacheMonitorOptions)
 		if err != nil {
