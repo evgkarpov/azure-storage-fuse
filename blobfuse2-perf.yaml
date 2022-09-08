@@ -120,12 +120,12 @@ jobs:
           VERBOSE_LOG: false
           USE_HTTP: false
         continueOnError: false
-        
+
       - script: |
           sudo ps -aux | grep blobfuse2
         displayName: 'Print Process info'
         env:
-          mount_dir: ${{ parameters.mount_dir }}
+          mount_dir: $(MOUNT_DIR)
 
       - script: |
           cd $(WORK_DIR)
