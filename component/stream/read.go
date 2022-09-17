@@ -157,12 +157,21 @@ func (r *ReadCache) copyCachedBlock(handle *handlemap.Handle, offset int64, data
 	for dataLeft > 0 && offset < handle.Size {
 		// round all offsets to the specific blocksize offsets
 		cachedBlockStartIndex := (offset - (offset % r.BlockSize))
+		var block *common.Block
+		var exists bool
+		handle.CacheObj.CurrentBlock.RLock()
 		// Lock on requested block and fileName to ensure it is not being rerequested or manipulated
-		block, exists, err := r.getBlock(handle, cachedBlockStartIndex)
-		if err != nil {
-			r.unlockBlock(block, exists)
-			log.Err("Stream::ReadInBuffer : failed to download block of %s with offset %d: [%s]", handle.Path, block.StartIndex, err.Error())
-			return dataRead, err
+		if offset >= handle.CacheObj.CurrentBlock.StartIndex && offset+int64(len(data)) < handle.CacheObj.CurrentBlock.EndIndex {
+			block, exists = handle.CacheObj.CurrentBlock, true
+		} else {
+			handle.CacheObj.CurrentBlock.RUnlock()
+			block, exists, err := r.getBlock(handle, cachedBlockStartIndex)
+			if err != nil {
+				r.unlockBlock(block, exists)
+				log.Err("Stream::ReadInBuffer : failed to download block of %s with offset %d: [%s]", handle.Path, block.StartIndex, err.Error())
+				return dataRead, err
+			}
+			handle.CacheObj.CurrentBlock = block
 		}
 		dataCopied := int64(copy(data[dataRead:], block.Data[offset-cachedBlockStartIndex:]))
 		r.unlockBlock(block, exists)

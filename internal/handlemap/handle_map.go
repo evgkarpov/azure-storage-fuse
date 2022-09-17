@@ -59,7 +59,8 @@ const (
 type Cache struct {
 	*cache_policy.LRUCache
 	*common.BlockOffsetList
-	StreamOnly bool
+	StreamOnly   bool
+	CurrentBlock *common.Block
 }
 
 type Handle struct {
@@ -174,6 +175,7 @@ func CreateCacheObject(capacity int64, handle *Handle) {
 		cache_policy.NewLRUCache(capacity),
 		&common.BlockOffsetList{},
 		false,
+		&common.Block{StartIndex: 0, EndIndex: 0},
 	}
 }
 
