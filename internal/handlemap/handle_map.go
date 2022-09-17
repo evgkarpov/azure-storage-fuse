@@ -175,7 +175,7 @@ func CreateCacheObject(capacity int64, handle *Handle) {
 		cache_policy.NewLRUCache(capacity),
 		&common.BlockOffsetList{},
 		false,
-		&common.Block{StartIndex: 0, EndIndex: 0},
+		&common.Block{StartIndex: -1, EndIndex: -1},
 	}
 }
 

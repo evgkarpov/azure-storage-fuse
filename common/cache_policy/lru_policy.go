@@ -144,6 +144,8 @@ func (cache *LRUCache) Remove(key int64) {
 		cache.Occupied -= nodeKeyPair.value.EndIndex - nodeKeyPair.value.StartIndex
 		//if handle is not provided then we're on the handle cache we can just remove it from cache
 		nodeKeyPair.value.Data = nil
+		nodeKeyPair.value.StartIndex = -1
+		nodeKeyPair.value.EndIndex = -1
 		delete(cache.Elements, key)
 		cache.List.Remove(node)
 	}
