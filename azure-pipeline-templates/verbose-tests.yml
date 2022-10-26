@@ -189,7 +189,7 @@ steps:
         adls: ${{ parameters.adls }}
         idstring: ${{ parameters.service }} with Key Credentials
         distro_name: ${{ parameters.distro_name }}
-        quick_test: ${{ parameters.quick_test }}
+        quick_test: false
         artifact_name: '${{ parameters.distro_name }}_${{ parameters.service }}_key.txt'
         verbose_log: ${{ parameters.verbose_log }}
         mountStep:
@@ -209,7 +209,7 @@ steps:
         adls: ${{ parameters.adls }}
         idstring: ${{ parameters.service }} with Streaming
         distro_name: ${{ parameters.distro_name }}
-        quick_test: ${{ parameters.quick_test }}
+        quick_test: false
         artifact_name: '${{ parameters.distro_name }}_${{ parameters.service }}_stream.txt'
         verbose_log: ${{ parameters.verbose_log }}
         mountStep:
@@ -229,7 +229,7 @@ steps:
         adls: ${{ parameters.adls }}
         idstring: ${{ parameters.service }} with Streaming with filename
         distro_name: ${{ parameters.distro_name }}
-        quick_test: ${{ parameters.quick_test }}
+        quick_test: false
         artifact_name: '${{ parameters.distro_name }}_${{ parameters.service }}_stream_with_filename.txt'
         verbose_log: ${{ parameters.verbose_log }}
         mountStep:
