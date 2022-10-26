@@ -65,7 +65,7 @@ parameters:
     type: string
   - name: quick_test
     type: boolean
-    default: "true"
+    default: "false"
   - name: verbose_log
     type: boolean
 
